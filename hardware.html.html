@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Банковская карта</title>
+</head>
+<body>
+    <script>
+        // Создание элемента <style> для добавления CSS стилей
+        const style = document.createElement('style');
+        // Добавление CSS стилей внутрь элемента <style>
+        style.textContent = `
+            body {
+                font-family: Arial, sans-serif; /* Установка шрифта для всего документа */
+            }
+            .container {
+                display: flex; /* Использование flexbox для расположения элементов */
+            }
+            .form-container, .card-preview {
+                width: 50%; /* Установка ширины для контейнеров формы и предпросмотра */
+                padding: 20px; /* Добавление внутренних отступов */
+            }
+            .card-preview {
+                border: 1px solid #ccc; /* Добавление рамки для предпросмотра карты */
+                text-align: center; /* Выравнивание текста по центру */
+            }
+            table {
+                width: 100%; /* Установка ширины таблицы */
+                border-collapse: collapse; /* Убираем двойные границы между ячейками */
+                margin-top: 20px; /* Добавление верхнего отступа */
+            }
+            table, th, td {
+                border: 1px solid #ccc; /* Добавление рамки для таблицы и ячеек */
+            }
+            th, td {
+                padding: 10px; /* Добавление внутренних отступов для ячеек */
+                text-align: left; /* Выравнивание текста по левому краю */
+            }
+            input:focus, select:focus {
+                border: 2px solid blue; /* Изменение стиля рамки при фокусе на поле ввода */
+                outline: none; /* Убираем стандартную обводку при фокусе */
+            }
+            input:blur, select:blur {
+                border: 1px solid #ccc; /* Возвращение стиля рамки при потере фокуса */
+            }
+        `;
+        // Добавление элемента <style> в <head> документа
+        document.head.appendChild(style);
+
+        // Создание контейнера для формы и предпросмотра карты
+        const container = document.createElement('div');
+        container.className = 'container'; // Присвоение класса для применения стилей
+        document.body.appendChild(container); // Добавление контейнера в <body>
+
+        // Создание контейнера для формы
+        const formContainer = document.createElement('div');
+        formContainer.className = 'form-container'; // Присвоение класса для применения стилей
+        container.appendChild(formContainer); // Добавление контейнера формы в основной контейнер
+
+        // Создание формы
+        const form = document.createElement('form');
+        form.id = 'cardForm'; // Присвоение ID для доступа к форме
+        formContainer.appendChild(form); // Добавление формы в контейнер формы
+
+        // Массив с данными для полей формы
+        const fields = [
+            { label: 'Название банка:', type: 'text', id: 'bankName', required: true },
+            { label: 'Тип платежной системы:', type: 'select', id: 'paymentSystem', options: ['Visa', 'MasterCard', 'Мир'], required: true },
+            { label: 'Номер карты:', type: 'text', id: 'cardNumber', maxlength: 16, required: true },
+            { label: 'Имя держателя карты:', type: 'text', id: 'cardHolder', required: true },
+            { label: 'Месяц и год окончания:', type: 'month', id: 'expiryDate', required: true }
+        ];
+
+        // Цикл по массиву fields для создания полей формы
+        fields.forEach(field => {
+            // Создание элемента <label>
+            const label = document.createElement('label');
+            label.textContent = field.label; // Установка текста для метки
+            label.htmlFor = field.id; // Связывание метки с полем ввода по ID
+            form.appendChild(label); // Добавление метки в форму
+
+            let input;
+            // Проверка типа поля: если 'select', создаем выпадающий список
+            if (field.type === 'select') {
+                input = document.createElement('select'); // Создание элемента <select>
+                input.id = field.id; // Присвоение ID
+                // Цикл по массиву options для создания элементов <option>
+                field.options.forEach(option => {
+                    const opt = document.createElement('option'); // Создание элемента <option>
+                    opt.value = option.toLowerCase(); // Установка значения (в нижнем регистре)
+                    opt.textContent = option; // Установка текста для опции
+                    input.appendChild(opt); // Добавление опции в выпадающий список
+                });
+            } else {
+                // Если тип поля не 'select', создаем обычное поле ввода
+                input = document.createElement('input');
+                input.type = field.type; // Установка типа поля (text, month)
+                input.id = field.id; // Присвоение ID
+                if (field.maxlength) input.maxLength = field.maxlength; // Установка максимальной длины, если указана
+            }
+            if (field.required) input.required = true; // Установка атрибута required, если поле обязательно
+            form.appendChild(input); // Добавление поля ввода в форму
+            form.appendChild(document.createElement('br')); // Добавление переноса строки
+            form.appendChild(document.createElement('br')); // Добавление переноса строки
+        });
+
+        // Создание кнопки отправки формы
+        const submitButton = document.createElement('button');
+        submitButton.type = 'submit'; // Установка типа кнопки - submit
+        submitButton.textContent = 'Добавить карту'; // Установка текста кнопки
+        form.appendChild(submitButton); // Добавление кнопки в форму
+
+        // Создание контейнера для предпросмотра карты
+        const cardPreview = document.createElement('div');
+        cardPreview.className = 'card-preview'; // Присвоение класса для применения стилей
+        container.appendChild(cardPreview); // Добавление контейнера предпросмотра в основной контейнер
+
+        // Создание содержимого для предпросмотра карты
+        const previewContent = document.createElement('div');
+        previewContent.id = 'cardPreview';
+        cardPreview.appendChild(previewContent);
+
+        // Создание изображения для логотипа платежной системы
+        const paymentSystemLogo = document.createElement('img');
+        paymentSystemLogo.id = 'Logo';
+        paymentSystemLogo.alt = 'Логотип платежной системы'; // Установка альтернативного текста
+        paymentSystemLogo.style.width = '100px'; // Установка ширины
+        paymentSystemLogo.style.display = 'none'; // Изначально скрываем логотип
+        previewContent.appendChild(paymentSystemLogo); // Добавление изображения в предпросмотр
+
+        // Создание элемента <p> для отображения номера карты
+        const previewCardNumber = document.createElement('p');
+        previewCardNumber.id = 'previewCardNumber';
+        previewCardNumber.textContent = '#### #### #### ####'; // Начальное значение
+        previewContent.appendChild(previewCardNumber); // Добавление элемента в предпросмотр
+
+        // Создание элемента <p> для отображения имени держателя карты
+        const previewCardHolder = document.createElement('p');
+        previewCardHolder.id = 'previewCardHolder';
+        previewCardHolder.textContent = 'ИМЯ ДЕРЖАТЕЛЯ'; // Начальное значение
+        previewContent.appendChild(previewCardHolder); // Добавление элемента в предпросмотр
+
+        // Создание элемента <p> для отображения срока действия карты
+        const previewExpiryDate = document.createElement('p');
+        previewExpiryDate.id = 'previewExpiryDate';
+        previewExpiryDate.textContent = 'ММ/ГГ'; // Начальное значение
+        previewContent.appendChild(previewExpiryDate); // Добавление элемента в предпросмотр
+
+        // Создание таблицы для отображения данных о картах
+        const table = document.createElement('table');
+        table.id = 'cardTable'; // Присвоение ID
+        document.body.appendChild(table); // Добавление таблицы в <body>
+
+        // Создание заголовка таблицы
+        const thead = document.createElement('thead');
+        table.appendChild(thead); // Добавление заголовка в таблицу
+
+        // Создание строки заголовка
+        const headerRow = document.createElement('tr');
+        thead.appendChild(headerRow); // Добавление строки в заголовок
+
+        // Массив с заголовками столбцов
+        const headers = ['Название банка', 'Тип платежной системы', 'Номер карты', 'Имя держателя', 'Окончание'];
+        // Цикл по массиву headers для создания ячеек заголовка
+        headers.forEach(headerText => {
+            const th = document.createElement('th'); // Создание элемента <th>
+            th.textContent = headerText; // Установка текста заголовка
+            headerRow.appendChild(th); // Добавление ячейки в строку заголовка
+        });
+
+        // Создание тела таблицы
+        const tbody = document.createElement('tbody');
+        table.appendChild(tbody); // Добавление тела в таблицу
+
+        // Получение ссылок на элементы формы по ID
+        const bankNameInput = document.getElementById('bankName');
+        const paymentSystemSelect = document.getElementById('paymentSystem');
+        const cardNumberInput = document.getElementById('cardNumber');
+        const cardHolderInput = document.getElementById('cardHolder');
+        const expiryDateInput = document.getElementById('expiryDate');
+
+        // Обработка события input для формы (обновление предпросмотра при вводе)
+        form.addEventListener('input', function() {
+            // Получение значений из полей ввода
+            const bankName = bankNameInput.value;
+            const paymentSystem = paymentSystemSelect.value;
+            const cardNumber = cardNumberInput.value;
+            const cardHolder = cardHolderInput.value;
+            const expiryDate = expiryDateInput.value;
+
+
+            // Обновление изображения логотипа платежной системы
+            paymentSystemLogo.src = `${paymentSystem}.png`;
+            paymentSystemLogo.style.display = 'block'; // Отображаем логотип
+
+            // Обновление номера карты в предпросмотре (с пробелами)
+            previewCardNumber.textContent = cardNumber.replace(/(\d{4})/g, '$1 ').trim();
+            // Обновление имени держателя карты в предпросмотре (в верхнем регистре)
+            previewCardHolder.textContent = cardHolder.toUpperCase();
+            // Обновление срока действия карты в предпросмотре
+            previewExpiryDate.textContent = expiryDate.slice(-2) + '/' + expiryDate.slice(2, 4);
+        });
+
+        // Обработка события change для выбора платежной системы (обновление логотипа)
+        paymentSystemSelect.addEventListener('change', function() {
+            const paymentSystem = paymentSystemSelect.value; // Получение выбранного значения
+            paymentSystemLogo.src = `${paymentSystem}.png`; // Обновление изображения логотипа
+            paymentSystemLogo.style.display = 'block'; // Отображаем логотип
+        });
+
+        // Обработка событий focus и blur для поля "Название банка"
+        bankNameInput.addEventListener('focus', function() {
+            bankNameInput.style.border = '2px solid blue'; // Изменение стиля рамки при фокусе
+        });
+        bankNameInput.addEventListener('blur', function() {
+            bankNameInput.style.border = '1px solid #ccc'; // Возвращение стиля рамки при потере фокуса
+        });
+
+        // Обработка событий focus и blur для поля "Номер карты"
+        cardNumberInput.addEventListener('focus', function() {
+            cardNumberInput.style.border = '2px solid blue';
+        });
+        cardNumberInput.addEventListener('blur', function() {
+            cardNumberInput.style.border = '1px solid #ccc';
+        });
+
+        // Обработка событий focus и blur для поля "Имя держателя карты"
+        cardHolderInput.addEventListener('focus', function() {
+            cardHolderInput.style.border = '2px solid blue';
+        });
+        cardHolderInput.addEventListener('blur', function() {
+            cardHolderInput.style.border = '1px solid #ccc';
+        });
+
+        // Обработка событий focus и blur для поля "Месяц и год окончания"
+        expiryDateInput.addEventListener('focus', function() {
+            expiryDateInput.style.border = '2px solid blue';
+        });
+        expiryDateInput.addEventListener('blur', function() {
+            expiryDateInput.style.border = '1px solid #ccc';
+        });
+
+        // Обработка отправки формы
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Предотвращение стандартного поведения формы (перезагрузки страницы)
+
+            // Получение значений из полей ввода
+            const bankName = bankNameInput.value;
+            const paymentSystem = paymentSystemSelect.value;
+            const cardNumber = cardNumberInput.value;
+            const cardHolder = cardHolderInput.value;
+            const expiryDate = expiryDateInput.value;
+
+            // Создание новой строки в таблице
+            const newRow = tbody.insertRow();
+            // Заполнение ячеек строки данными из формы
+            newRow.innerHTML = `
+                <td>${bankName}</td>
+                <td>${paymentSystem}</td>
+                <td>${cardNumber.replace(/(\d{4})/g, '$1 ').trim()}</td>
+                <td>${cardHolder}</td>
+                <td>${expiryDate.slice(-2)}/${expiryDate.slice(2, 4)}</td>
+            `;
+
+            // Очистка формы
+            form.reset();
+            // Скрытие логотипов
+           // bankLogo.style.display = 'none';  // Предполагается, что bankLogo также был добавлен в коде. Убери этот коммент, если он там есть.
+            paymentSystemLogo.style.display = 'none';
+            // Сброс значений в предпросмотре карты
+            previewCardNumber.textContent = '#### #### #### ####';
+            previewCardHolder.textContent = 'ИМЯ ДЕРЖАТЕЛЯ';
+            previewExpiryDate.textContent = 'ММ/ГГ';
+        });
+    </script>
+</body>
+</html>
